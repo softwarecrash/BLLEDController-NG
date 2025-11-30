@@ -1,26 +1,25 @@
 #include <Arduino.h>
 bool shouldRestart = false;
 unsigned long restartRequestTime = 0;
-#include "./blled/logSerial.h"
-#include "./blled/leds.h"
-#include "./blled/filesystem.h"
-#include "./blled/types.h"
-#include "./blled/bblPrinterDiscovery.h"
-#include "./blled/web-server.h"
-#include "./blled/mqttmanager.h"
-#include "./blled/serialmanager.h"
-#include "./blled/wifi-manager.h"
-#include "./blled/ssdp.h"
-
+#include "./blflc/logserial.h"
+#include "./blflc/leds.h"
+#include "./blflc/filesystem.h"
+#include "./blflc/types.h"
+#include "./blflc/bblprinterdiscovery.h"
+#include "./blflc/web-server.h"
+#include "./blflc/mqttmanager.h"
+#include "./blflc/wifi-manager.h"
+#include "./blflc/ssdp.h"
+#include "./blflc/improv-serial.h"
 
 int wifi_reconnect_count = 0;
 
 void defaultcolors()
 {
     LogSerial.println(F("Setting default customisable colors"));
-    printerConfig.runningColor = hex2rgb("#000000", 255, 255); // WHITE Running
-    printerConfig.testColor = hex2rgb("#3F3CFB");              // Violet Test
-    printerConfig.finishColor = hex2rgb("#00FF00");            // Green Finish
+    printerConfig.runningColor = hex2rgb("#FFFFFF"); // WHITE Running
+    printerConfig.testColor = hex2rgb("#3F3CFB");    // Violet Test
+    printerConfig.finishColor = hex2rgb("#00FF00");  // Green Finish
 
     printerConfig.stage14Color = hex2rgb("#000000"); // OFF Cleaning Nozzle
     printerConfig.stage1Color = hex2rgb("#000055");  // OFF Bed Leveling
@@ -45,6 +44,10 @@ void setup()
 {
     Serial.begin(115200);
     delay(100);
+
+    // Initialize Improv Serial for WiFi provisioning via ESP Web Tools
+    setupImprovSerial();
+
     Serial.println(F("Initializing"));
     Serial.println(ESP.getFreeHeap());
     Serial.println("");
@@ -53,22 +56,25 @@ void setup()
     Serial.println(F(" **"));
     Serial.println("");
     defaultcolors();
-    setupLeds();
-    tweenToColor(100, 100, 100, 100, 100); // ALL LEDS ON
-    Serial.println(F(""));
 
-    tweenToColor(255, 0, 0, 0, 0); // RED
     setupFileSystem();
     loadFileSystem();
     Serial.println(F(""));
 
-    tweenToColor(printerConfig.wifiRGB); // Customisable - Default is ORANGE
-    setupSerial();
+    setupRelay();
+    setRelayState(true);
+
+    setupLeds();
+
+    setLedColor(CRGB(100, 100, 100)); // WHITE - ALL LEDS ON
+    Serial.println(F(""));
+
+    setLedColor(colorToCRGB(printerConfig.wifiRGB)); // Customisable - Default is ORANGE
 
     if (strlen(globalVariables.SSID) == 0 || strlen(globalVariables.APPW) == 0)
     {
-        Serial.println(F("SSID or password is missing. Please configure both by going to: https://dutchdevelop.com/blled-configuration-setup/"));
-        tweenToColor(100, 0, 100, 0, 0); // PINK
+        Serial.println(F("SSID or password is missing. Please connect to BLFLC_AP to configure your WiFi settings."));
+        setLedColor(CRGB(100, 0, 100)); // PINK
         startAPMode();
         setupWebserver();
         return;
@@ -85,18 +91,18 @@ void setup()
     else
     {
         Serial.println(F("[WiFiManager] connected. Starting webUI."));
-        tweenToColor(0, 0, 255, 0, 0); // BLUE
+        setLedColor(CRGB(0, 0, 255)); // BLUE
         setupWebserver();
     }
 
     start_ssdp();
 
-    tweenToColor(34, 224, 238, 0, 0); // CYAN
+    setLedColor(CRGB(34, 224, 238)); // CYAN
     setupMqtt();
     // >>> Fix: prevent false offline after 30s
     printerVariables.disconnectMQTTms = millis();
     Serial.println();
-    Serial.print(F("** BLLED Controller started "));
+    Serial.print(F("** BLFLC Controller started "));
     Serial.print(F("using firmware version: "));
     Serial.print(globalVariables.FWVersion);
     Serial.println(F(" **"));
@@ -108,7 +114,9 @@ void setup()
 
 void loop()
 {
-    serialLoop();
+    // Process Improv Serial for WiFi provisioning
+    loopImprovSerial();
+
     if (globalVariables.started)
     {
         websocketLoop();
@@ -140,7 +148,7 @@ void loop()
         {
             dnsServer.processNextRequest();
         }
-        if(WiFi.status() == WL_CONNECTED && WiFi.getMode() != WIFI_AP)
+        if (WiFi.status() == WL_CONNECTED && WiFi.getMode() != WIFI_AP)
         {
             bblSearchPrinters();
         }
@@ -148,8 +156,8 @@ void loop()
     if (printerConfig.rescanWiFiNetwork)
     {
         LogSerial.println(F("Web submitted refresh of Wifi Scan (assigning Strongest AP)"));
-        tweenToColor(printerConfig.wifiRGB); // Customisable - Default is ORANGE
-        scanNetwork();                       // Sets the MAC address for following connection attempt
+        setLedColor(colorToCRGB(printerConfig.wifiRGB)); // Customisable - Default is ORANGE
+        scanNetwork();                                   // Sets the MAC address for following connection attempt
         printerConfig.rescanWiFiNetwork = false;
         updateleds();
     }

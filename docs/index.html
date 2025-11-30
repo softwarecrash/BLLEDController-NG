@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BL FastLED Controller - Web Installer</title>
+    <meta name="description" content="Flash BL FastLED Controller firmware to your ESP32 directly from your browser">
+    <script type="module" src="https://unpkg.com/esp-web-tools@10/dist/web/install-button.js?module"></script>
+    <style>
+        :root {
+            --primary-color: #00a86b;
+            --primary-hover: #008f5b;
+            --bg-color: #1a1a2e;
+            --card-bg: #16213e;
+            --text-color: #eaeaea;
+            --text-muted: #a0a0a0;
+            --border-color: #0f3460;
+            --warning-bg: #3d2914;
+            --warning-border: #f39c12;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 2rem;
+            flex: 1;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        h1 {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+            color: var(--primary-color);
+        }
+
+        .subtitle {
+            color: var(--text-muted);
+            font-size: 1.1rem;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 2rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .install-section {
+            text-align: center;
+        }
+
+        .install-section h2 {
+            margin-bottom: 1rem;
+        }
+
+        esp-web-install-button {
+            display: inline-block;
+        }
+
+        esp-web-install-button::part(button) {
+            background: var(--primary-color);
+            color: white;
+            font-size: 1.2rem;
+            font-weight: 600;
+            padding: 1rem 2rem;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        esp-web-install-button::part(button):hover {
+            background: var(--primary-hover);
+        }
+
+        .warning {
+            background: var(--warning-bg);
+            border: 1px solid var(--warning-border);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .warning-title {
+            color: var(--warning-border);
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .requirements h3 {
+            margin-bottom: 1rem;
+            color: var(--primary-color);
+        }
+
+        .requirements ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .requirements li {
+            padding: 0.5rem 0;
+            padding-left: 1.5rem;
+            position: relative;
+        }
+
+        .requirements li::before {
+            content: "✓";
+            color: var(--primary-color);
+            position: absolute;
+            left: 0;
+        }
+
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .feature {
+            background: rgba(0, 168, 107, 0.1);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1rem;
+            text-align: center;
+        }
+
+        .feature-icon {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .feature-title {
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+
+        .feature-desc {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+        }
+
+        .browser-support {
+            text-align: center;
+            margin-top: 1rem;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+        .browser-icons {
+            margin-top: 0.5rem;
+        }
+
+        .browser-icons span {
+            margin: 0 0.5rem;
+        }
+
+        footer {
+            text-align: center;
+            padding: 1.5rem;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            border-top: 1px solid var(--border-color);
+        }
+
+        footer a {
+            color: var(--primary-color);
+            text-decoration: none;
+        }
+
+        footer a:hover {
+            text-decoration: underline;
+        }
+
+        .version-info {
+            text-align: center;
+            margin-top: 1rem;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                padding: 1rem;
+            }
+
+            h1 {
+                font-size: 1.5rem;
+            }
+
+            .card {
+                padding: 1.5rem;
+            }
+
+            esp-web-install-button::part(button) {
+                padding: 0.8rem 1.5rem;
+                font-size: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>BL FastLED Controller</h1>
+            <p class="subtitle">Web-based firmware installer for ESP32</p>
+        </header>
+
+        <div class="warning">
+            <div class="warning-title">Important Notice</div>
+            <p>Do not upgrade from BLLEDController or BLLEDController-NG. You <strong>must</strong> erase your ESP32 completely before flashing this firmware.</p>
+        </div>
+
+        <div class="card install-section">
+            <h2>Install Firmware</h2>
+            <p style="margin-bottom: 1.5rem; color: var(--text-muted);">
+                Connect your ESP32 via USB and click the button below to flash the firmware.
+            </p>
+
+            <esp-web-install-button manifest="manifest.json">
+                <button slot="activate">Install BL FastLED Controller</button>
+                <span slot="unsupported">
+                    Your browser does not support Web Serial.<br>
+                    Please use Chrome, Edge, or Opera on desktop.
+                </span>
+                <span slot="not-allowed">
+                    Web Serial access was denied.<br>
+                    Please grant permission and try again.
+                </span>
+            </esp-web-install-button>
+
+            <p class="version-info">
+                Latest version: <strong id="version">Loading...</strong>
+            </p>
+
+            <div class="browser-support">
+                Supported browsers:
+                <div class="browser-icons">
+                    <span>Chrome</span> |
+                    <span>Edge</span> |
+                    <span>Opera</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="card requirements">
+            <h3>Requirements</h3>
+            <ul>
+                <li>ESP32 development board (ESP32-WROOM recommended)</li>
+                <li>USB cable for flashing</li>
+                <li>Addressable LED strip (WS2812B, SK6812, etc.)</li>
+                <li>Bambu Lab printer (X1, X1C, P1P, or P1S)</li>
+                <li>Chrome, Edge, or Opera browser on desktop</li>
+            </ul>
+        </div>
+
+        <div class="card">
+            <h3 style="margin-bottom: 1rem; color: var(--primary-color);">Features</h3>
+            <div class="features">
+                <div class="feature">
+                    <div class="feature-icon">📶</div>
+                    <div class="feature-title">Easy WiFi Setup</div>
+                    <div class="feature-desc">Configure WiFi directly in browser via Improv</div>
+                </div>
+                <div class="feature">
+                    <div class="feature-icon">💡</div>
+                    <div class="feature-title">FastLED Support</div>
+                    <div class="feature-desc">WS2812B, SK6812, APA102, and more</div>
+                </div>
+                <div class="feature">
+                    <div class="feature-icon">🎨</div>
+                    <div class="feature-title">Pattern Effects</div>
+                    <div class="feature-desc">Solid, breathing, chase, rainbow</div>
+                </div>
+                <div class="feature">
+                    <div class="feature-icon">📊</div>
+                    <div class="feature-title">Progress Bar</div>
+                    <div class="feature-desc">Visual print progress display</div>
+                </div>
+                <div class="feature">
+                    <div class="feature-icon">🔔</div>
+                    <div class="feature-title">Status Alerts</div>
+                    <div class="feature-desc">HMS errors, pause, finish states</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3 style="margin-bottom: 1rem; color: var(--primary-color);">After Installation</h3>
+            <ol style="padding-left: 1.5rem;">
+                <li style="margin-bottom: 0.5rem;"><strong>Configure WiFi:</strong> After flashing, you'll be prompted to connect to your WiFi network directly in this browser</li>
+                <li style="margin-bottom: 0.5rem;"><strong>Access the Web UI:</strong> Once connected, click the link provided to open the device's configuration page</li>
+                <li style="margin-bottom: 0.5rem;"><strong>Configure Printer:</strong> Enter your Bambu Lab printer's IP address, serial number, and access code</li>
+                <li><strong>Set up LEDs:</strong> Configure your LED strip type and color preferences</li>
+            </ol>
+            <p style="margin-top: 1rem; color: var(--text-muted); font-size: 0.9rem;">
+                <em>Alternatively, if WiFi setup doesn't appear, the ESP32 will create a WiFi access point named <strong>BLFLC_AP</strong>. Connect to it and navigate to <strong>192.168.4.1</strong>.</em>
+            </p>
+        </div>
+    </div>
+
+    <footer>
+        <p>
+            <a href="https://github.com/Djelibeybi/BLFastLEDController" target="_blank">GitHub Repository</a> |
+            <a href="https://github.com/Djelibeybi/BLFastLEDController/blob/main/docs/manual.md" target="_blank">Documentation</a>
+        </p>
+        <p style="margin-top: 0.5rem;">
+            Powered by <a href="https://esphome.github.io/esp-web-tools/" target="_blank">ESP Web Tools</a>
+        </p>
+    </footer>
+
+    <script>
+        // Fetch manifest to display version
+        fetch('manifest.json')
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('version').textContent = data.version || 'Unknown';
+            })
+            .catch(() => {
+                document.getElementById('version').textContent = 'Unknown';
+            });
+    </script>
+</body>
+</html>

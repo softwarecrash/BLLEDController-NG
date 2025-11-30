@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
-    <title>BLLED WiFi Setup</title>
+    <title>BLFLC WiFi Setup</title>
     <link rel="stylesheet" href="/style.css">
 </head>
 
@@ -12,8 +12,8 @@
     <canvas id="particleCanvas" style="background: rgb(20,80,49);"></canvas>
     <div id="container">
         <div id="header">
-            <img id="logo" src="/blled.svg" alt="BLLED Logo">
-            <h1>BLLED WiFi Setup</h1>
+            <img id="logo" src="/blflc.svg" alt="BLFLC Logo">
+            <h1>BLFLC WiFi Setup</h1>
         </div>
 
         <div id="networks">Loading...</div>
@@ -197,7 +197,7 @@
             const accessCode = document.getElementById("accessCode").value;
             const webUser = document.getElementById("webUser").value;
             const webPass = document.getElementById("webPass").value;
-            
+
             try {
                 const res = await fetch("/submitWiFi", {
                     method: "POST",

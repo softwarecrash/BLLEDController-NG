@@ -1,10 +1,13 @@
 .pio
 .vscode
 .firmware
+.venv
 build/
-BLLEDController.code-workspace
 .python-version
 src/www/www.h
 .DS_Store
 **/.DS_Store
-# .github
+.claude
+.serena
+PROJECT_INDEX.*
+CLAUDE.md

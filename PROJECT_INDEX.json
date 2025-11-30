@@ -1,0 +1,148 @@
+{
+  "project": {
+    "name": "BLLEDController-NG",
+    "version": "2.3.0.argb.1",
+    "codename": "Balder",
+    "description": "ESP32 firmware for Bambu Lab 3D printer LED control",
+    "generated": "2025-11-30",
+    "platform": "espressif32",
+    "board": "esp32dev",
+    "framework": "arduino"
+  },
+  "entry_points": {
+    "main": "src/main.cpp",
+    "setup": "src/main.cpp:setup()",
+    "loop": "src/main.cpp:loop()"
+  },
+  "modules": {
+    "types": {
+      "path": "src/blled/types.h",
+      "purpose": "Global data structures",
+      "exports": ["PrinterVariables", "PrinterConfig", "GlobalVariables", "LedConfig", "COLOR", "LedChipType", "LedColorOrder", "LedPattern"]
+    },
+    "leds": {
+      "path": "src/blled/leds.h",
+      "purpose": "FastLED control and state machine",
+      "exports": ["setupLeds", "updateleds", "setLedColor", "setLedState", "setLedsOff", "setRelayState", "setupRelay"]
+    },
+    "patterns": {
+      "path": "src/blled/patterns.h",
+      "purpose": "LED pattern effects",
+      "exports": ["applyPattern", "applySolidPattern", "applyBreathingPattern", "applyChasePattern", "applyRainbowPattern", "applyProgressPattern", "runTestSequence", "stopTestSequence"]
+    },
+    "mqtt": {
+      "path": "src/blled/mqttmanager.h",
+      "purpose": "MQTT client for Bambu printer",
+      "exports": ["setupMqtt", "connectMqtt", "mqttTask", "ParseCallback", "mqttloop", "controlChamberLight"]
+    },
+    "web_server": {
+      "path": "src/blled/web-server.h",
+      "purpose": "AsyncWebServer and WebSocket",
+      "exports": ["setupWebserver", "handleSetup", "handleSubmitConfig", "handleWiFiSetupPage", "handleSubmitWiFi", "websocketLoop", "handleLedTest"]
+    },
+    "filesystem": {
+      "path": "src/blled/filesystem.h",
+      "purpose": "LittleFS config persistence",
+      "exports": ["setupFileSystem", "loadFileSystem", "saveFileSystem", "deleteFileSystem", "hasFileSystem"]
+    },
+    "wifi_manager": {
+      "path": "src/blled/wifi-manager.h",
+      "purpose": "WiFi connection and AP mode",
+      "exports": ["connectToWifi", "startAPMode", "scanNetwork", "configModeCallback"]
+    },
+    "printer_discovery": {
+      "path": "src/blled/bblPrinterDiscovery.h",
+      "purpose": "SSDP printer discovery",
+      "exports": ["bblSearchPrinters", "bblIsPrinterKnown", "bblPrintKnownPrinters", "BBLPrinter"]
+    }
+  },
+  "web_assets": {
+    "setupPage.html": "Main LED configuration page",
+    "wifiSetup.html": "WiFi and printer setup",
+    "updatePage.html": "OTA firmware update",
+    "backupRestore.html": "Config backup/restore",
+    "webSerialPage.html": "Debug log viewer",
+    "style.css": "Shared CSS styles",
+    "particleCanvas.js": "UI particle effects"
+  },
+  "endpoints": {
+    "/": { "handler": "handleSetup", "method": "GET", "description": "Main LED setup page" },
+    "/wifi": { "handler": "handleWiFiSetupPage", "method": "GET", "description": "WiFi/printer setup" },
+    "/fwupdate": { "handler": "handleUpdatePage", "method": "GET", "description": "OTA firmware upload" },
+    "/backuprestore": { "handler": "handleConfigPage", "method": "GET", "description": "Config backup/restore" },
+    "/webserial": { "handler": "handleWebSerialPage", "method": "GET", "description": "Debug log viewer" },
+    "/submitconfig": { "handler": "handleSubmitConfig", "method": "POST", "description": "Save LED config" },
+    "/submitwifi": { "handler": "handleSubmitWiFi", "method": "POST", "description": "Save WiFi config" },
+    "/config": { "handler": "handleGetConfig", "method": "GET", "description": "Get current config" },
+    "/printerconfig": { "handler": "handlePrinterConfigJson", "method": "GET", "description": "Get printer config" },
+    "/ledtest": { "handler": "handleLedTest", "method": "GET", "description": "Trigger LED test" },
+    "/wifiscan": { "handler": "handleWiFiScan", "method": "GET", "description": "Scan WiFi networks" },
+    "/printerlist": { "handler": "handlePrinterList", "method": "GET", "description": "List discovered printers" },
+    "/factoryreset": { "handler": "handleFactoryReset", "method": "GET", "description": "Factory reset" }
+  },
+  "dependencies": {
+    "fastled/FastLED": { "version": "^3.7.7", "purpose": "Addressable LED control" },
+    "bblanchon/ArduinoJson": { "version": "7.4.2", "purpose": "JSON parsing" },
+    "knolleary/pubsubclient": { "version": "2.8.0", "purpose": "MQTT client" },
+    "luc-github/ESP32SSDP": { "version": "1.2.1", "purpose": "SSDP discovery" },
+    "ESP32Async/AsyncTCP": { "version": "latest", "purpose": "Async TCP" },
+    "ESP32Async/ESPAsyncWebServer": { "version": "latest", "purpose": "Web server" },
+    "mathieucarbou/MycilaWebSerial": { "version": "^8.1.1", "purpose": "Debug serial over web" }
+  },
+  "build": {
+    "commands": {
+      "build": "uv run pio run -e esp32dev",
+      "upload": "uv run pio run -e esp32dev -t upload",
+      "uploadfs": "uv run pio run -e esp32dev -t uploadfs",
+      "monitor": "uv run pio device monitor -b 115200",
+      "clean": "uv run pio run -e esp32dev -t clean"
+    },
+    "outputs": {
+      "firmware": ".firmware/BLLC_V{version}.bin",
+      "ota": ".firmware/BLLC_V{version}.bin.ota"
+    },
+    "scripts": {
+      "pre_build": "pre_build.py",
+      "merge": "merge_firmware.py"
+    }
+  },
+  "configuration": {
+    "file": "/blledconfig.json",
+    "storage": "LittleFS"
+  },
+  "enums": {
+    "LedChipType": ["CHIP_WS2812B", "CHIP_SK6812", "CHIP_SK6812_RGBW", "CHIP_APA102", "CHIP_WS2811", "CHIP_NEOPIXEL"],
+    "LedColorOrder": ["ORDER_GRB", "ORDER_RGB", "ORDER_BRG", "ORDER_RBG", "ORDER_BGR", "ORDER_GBR", "ORDER_GRBW", "ORDER_RGBW"],
+    "LedPattern": ["PATTERN_SOLID", "PATTERN_BREATHING", "PATTERN_CHASE", "PATTERN_RAINBOW", "PATTERN_PROGRESS"]
+  },
+  "printer_stages": {
+    "-1": "IDLE",
+    "0": "Printing",
+    "1": "Bed leveling",
+    "2": "Preheating",
+    "8": "Calibrating extrusion",
+    "9": "Scanning bed",
+    "10": "First layer inspection",
+    "14": "Cleaning nozzle",
+    "16": "Paused",
+    "30": "Paused",
+    "255": "IDLE"
+  },
+  "constants": {
+    "MAX_LEDS": "defined in leds.h",
+    "MQTT_RETRY_INTERVAL_MS": "MQTT reconnection interval",
+    "MQTT_OFFLINE_TIMEOUT_MS": "Offline detection timeout",
+    "DOOR_DEBOUNCE_MS": "Door switch debounce",
+    "BREATHING_PERIOD_MS": "Breathing pattern cycle",
+    "CHASE_SPEED_MS": "Chase pattern speed",
+    "RAINBOW_SPEED_MS": "Rainbow cycle speed"
+  },
+  "testing": {
+    "simulator": "bblp_sim.py"
+  },
+  "session_memories": [
+    "session-improvements-2025-11",
+    "session-relay-feature-2025-11",
+    "session-rgbw-fix-2025-11"
+  ]
+}

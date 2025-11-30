@@ -17,7 +17,7 @@ mqtt_config = {
 
 # === GUI Root and Variables ===
 root = tk.Tk()
-root.title("BLLED Printer MQTT Simulator")
+root.title("BLFLC Printer MQTT Simulator")
 
 chamber_light_state = tk.StringVar(value="ON")  # Light is ON by default after printer startup
 

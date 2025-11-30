@@ -1,0 +1,164 @@
+#include "bblprinterdiscovery.h"
+#include "filesystem.h"
+#include "types.h"
+#include "logserial.h"
+
+static WiFiUDP bblUdp;
+static bool bblUdpInitialized = false;
+static unsigned long bblLastDiscovery = 0;
+
+BBLPrinter bblLastKnownPrinters[BBL_MAX_PRINTERS];
+int bblKnownPrinterCount = 0;
+
+bool bblIsPrinterKnown(IPAddress ip, int *index)
+{
+    for (int i = 0; i < bblKnownPrinterCount; i++)
+    {
+        if (bblLastKnownPrinters[i].ip == ip)
+        {
+            if (index)
+                *index = i;
+            return true;
+        }
+    }
+    return false;
+}
+
+void bblPrintKnownPrinters()
+{
+    LogSerial.println("[BBLScan] Known printers:");
+    if (bblKnownPrinterCount == 0)
+    {
+        LogSerial.println("  (none)");
+    }
+    for (int i = 0; i < bblKnownPrinterCount; i++)
+    {
+        LogSerial.printf("  [%d] IP: %s", i + 1, bblLastKnownPrinters[i].ip.toString().c_str());
+        if (strlen(bblLastKnownPrinters[i].usn) > 0)
+        {
+            LogSerial.printf("  [USN: %s]", bblLastKnownPrinters[i].usn);
+        }
+        LogSerial.println();
+    }
+}
+
+void bblSearchPrinters()
+{
+    unsigned long now = millis();
+    if (now - bblLastDiscovery < BBL_DISCOVERY_INTERVAL)
+        return;
+    bblLastDiscovery = now;
+
+    if (!bblUdpInitialized)
+    {
+        bblUdp.beginMulticast(BBL_SSDP_MCAST_IP, BBL_SSDP_PORT);
+        bblUdpInitialized = true;
+    }
+
+    String msearch =
+        "M-SEARCH * HTTP/1.1\r\n"
+        "HOST: 239.255.255.250:2021\r\n"
+        "MAN: \"ssdp:discover\"\r\n"
+        "MX: 5\r\n"
+        "ST: urn:bambulab-com:device:3dprinter:1\r\n\r\n";
+
+    for (int i = 0; i < 2; i++)
+    {
+        bblUdp.beginPacket(BBL_SSDP_MCAST_IP, BBL_SSDP_PORT);
+        bblUdp.print(msearch);
+        bblUdp.endPacket();
+        delay(250);
+    }
+
+    if (printerConfig.debugging)
+    {
+        LogSerial.println("[BBLScan] Searching for printers...");
+    }
+
+    unsigned long start = millis();
+    int sessionFound = 0;
+    IPAddress seenIPs[BBL_MAX_PRINTERS];
+    int seenCount = 0;
+
+    while (millis() - start < BBL_SSDP_SEARCH_TIMEOUT_MS)
+    {
+        int size = bblUdp.parsePacket();
+        if (size)
+        {
+            IPAddress senderIP = bblUdp.remoteIP();
+
+            bool alreadySeen = false;
+            for (int i = 0; i < seenCount; i++)
+            {
+                if (seenIPs[i] == senderIP)
+                {
+                    alreadySeen = true;
+                    break;
+                }
+            }
+            if (alreadySeen)
+                continue;
+            if (seenCount < BBL_MAX_PRINTERS)
+                seenIPs[seenCount++] = senderIP;
+
+            char buffer[512];
+            int len = bblUdp.read(buffer, sizeof(buffer) - 1);
+            buffer[len] = 0;
+
+            String response(buffer);
+            String usnStr = "";
+            int usnPos = response.indexOf("USN:");
+            if (usnPos >= 0)
+            {
+                int end = response.indexOf("\r\n", usnPos);
+                usnStr = response.substring(usnPos + 4, end);
+                usnStr.trim();
+            }
+
+            // IP update check for stored USN
+            if (strlen(printerConfig.serialNumber) > 0 && usnStr.length() > 0 &&
+                strcmp(printerConfig.serialNumber, usnStr.c_str()) == 0)
+            {
+                String currentIP = senderIP.toString();
+                if (String(printerConfig.printerIP) != currentIP)
+                {
+                    LogSerial.printf("[BBLScan] Detected matching USN with updated IP (%s → %s). Saving...\n", printerConfig.printerIP, currentIP.c_str());
+                    strlcpy(printerConfig.printerIP, currentIP.c_str(), sizeof(printerConfig.printerIP));
+                    saveFileSystem();
+                }
+            }
+
+            int existingIndex = -1;
+            bool isNewPrinter = !bblIsPrinterKnown(senderIP, &existingIndex);
+
+            if (printerConfig.debugging || (printerConfig.debugOnChange && isNewPrinter))
+            {
+                LogSerial.printf("[BBLScan]  [%d] IP: %s", ++sessionFound, senderIP.toString().c_str());
+                if (usnStr.length())
+                {
+                    LogSerial.printf("  [USN: %s]", usnStr.c_str());
+                }
+                LogSerial.println();
+            }
+
+            if (isNewPrinter && bblKnownPrinterCount < BBL_MAX_PRINTERS)
+            {
+                BBLPrinter &printer = bblLastKnownPrinters[bblKnownPrinterCount++];
+                printer.ip = senderIP;
+                strncpy(printer.usn, usnStr.c_str(), sizeof(printer.usn) - 1);
+                printer.usn[sizeof(printer.usn) - 1] = 0;
+            }
+        }
+        delay(10);
+    }
+
+    if (printerConfig.debugging && sessionFound == 0)
+    {
+        LogSerial.println("[BBLScan] No printers found.");
+    }
+
+    if (printerConfig.debugging)
+    {
+        bblPrintKnownPrinters();
+    }
+}
