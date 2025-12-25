@@ -379,8 +379,10 @@ else // Door closed
 
 
 
+        bool stgCurPresent = !messageobject["print"]["stg_cur"].isNull();
+
         // Check BBLP Stage
-        if (!messageobject["print"]["stg_cur"].isNull())
+        if (stgCurPresent)
         {
             if (printerVariables.stage != messageobject["print"]["stg_cur"].as<int>())
             {
@@ -390,6 +392,39 @@ else // Door closed
                 {
                     LogSerial.print(F("[MQTT] update - stg_cur now: "));
                     LogSerial.println(printerVariables.stage);
+                }
+                Changed = true;
+            }
+        }
+
+        // Fallback for missing stg_cur during first layer scan
+        if (!messageobject["print"]["print_real_action"].isNull())
+        {
+            int action = messageobject["print"]["print_real_action"].as<int>();
+
+            if (printerVariables.printRealAction != action)
+            {
+                printerVariables.printRealAction = action;
+                if (printerConfig.debugingchange || printerConfig.debuging)
+                {
+                    LogSerial.print(F("[MQTT] update - print_real_action now: "));
+                    LogSerial.println(printerVariables.printRealAction);
+                }
+            }
+
+            String gcodeStateNow = printerVariables.gcodeState;
+            if (!messageobject["print"]["gcode_state"].isNull())
+            {
+                gcodeStateNow = messageobject["print"]["gcode_state"].as<String>();
+            }
+
+            if (!stgCurPresent && action == 0 && gcodeStateNow == "RUNNING" &&
+                (printerVariables.stage == 9 || printerVariables.stage == 10))
+            {
+                printerVariables.stage = 0;
+                if (printerConfig.debugingchange || printerConfig.debuging)
+                {
+                    LogSerial.println(F("[MQTT] Missing stg_cur; forcing stage 0 after scan"));
                 }
                 Changed = true;
             }

@@ -43,6 +43,7 @@ extern "C"
         unsigned long lastdoorOpenms = 0;       // Last time door was closed
         bool chamberLightLocked = false;  // blocks replicate while true
         bool ledWasForcedByDoor = false;
+        int printRealAction = -1;
     } PrinterVariables;
     PrinterVariables printerVariables;
 
